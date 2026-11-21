@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">FocusTime</string>
+    <string name="channel_timer_name">Focus session</string>
+    <string name="channel_timer_description">Ongoing Pomodoro countdown with controls</string>
+    <string name="channel_alerts_name">Session alerts</string>
+    <string name="channel_alerts_description">Alerts when a focus session or break ends</string>
+</resources>
