@@ -132,7 +132,7 @@ The build also produces `app/build/outputs/apk/debug/app-debug.apk`.
 ## Tests
 
 ```powershell
-.\gradlew.bat testDebugUnitTest          # 65 JVM tests
+.\gradlew.bat testDebugUnitTest          # 69 JVM tests
 .\gradlew.bat connectedDebugAndroidTest  # 7 Compose UI tests on a device
 ```
 
@@ -140,7 +140,7 @@ Latest run on the Nothing Phone (3a) Lite (`A001T`, Android 16 / API 36):
 
 | Suite | Result |
 | --- | --- |
-| `testDebugUnitTest` | 65 tests, 0 failures, 0 skipped |
+| `testDebugUnitTest` | 69 tests, 0 failures, 0 skipped |
 | `connectedDebugAndroidTest` | 7 tests, 0 failures |
 | `assembleDebug` | success — `releases/FocusTime-debug.apk` (10.8 MB) |
 
@@ -152,7 +152,8 @@ The unit tests now include regressions for the timer reset bugs: a new focus ses
 configured duration, elapsed time never carries into a new cycle, reset restores the configured
 duration, changing durations while paused clamps the paused remainder, and focus-to-break
 transitions rebuild a fresh break length. They also cover `TimerState.progressAt` (the live
-remaining share used by the ring and plant) and the Morse encoder's dot/dash units and gaps.
+remaining share used by the ring and plant), the plant's focus/break growth mapping, and the
+Morse encoder's dot/dash units and gaps.
 
 If Gradle test workers fail with `Could not find or load main class Files\Common`, the Windows
 `PATH` contains a stray quote (see `C:\Program Files\WSL\"`). Run Gradle with a clean PATH, e.g.

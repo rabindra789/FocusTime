@@ -53,12 +53,8 @@ fun GrowingPlantFace(
     modifier: Modifier = Modifier,
 ) {
     val palette = LocalFocusPalette.current
-    // Focus grows the plant; a break returns it to the ground. Both read the live remainder.
-    val elapsed = state.progressAt(remainingMillis)
-    val target = when (state.sessionType) {
-        SessionType.FOCUS -> elapsed
-        SessionType.SHORT_BREAK, SessionType.LONG_BREAK -> 1f - elapsed
-    }
+    // Focus grows the plant; a break folds it back into the ground.
+    val target = plantGrowth(state.sessionType, state.progressAt(remainingMillis))
     val growth by animateFloatAsState(
         targetValue = target.coerceIn(0f, 1f),
         animationSpec = if (reducedMotion) snap() else tween(1_200, easing = LinearEasing),
@@ -114,6 +110,13 @@ fun GrowingPlantFace(
         }
     }
 }
+
+/**
+ * Focus growth is the elapsed share; any break rests at the seed, whether it is ready, running or
+ * paused, so a finished focus always visibly folds away.
+ */
+internal fun plantGrowth(sessionType: SessionType, elapsed: Float): Float =
+    if (sessionType == SessionType.FOCUS) elapsed.coerceIn(0f, 1f) else 0f
 
 private fun DrawScope.drawPlant(
     growth: Float,
