@@ -20,9 +20,8 @@ dependency-light.
 ./gradlew connectedDebugAndroidTest   # Compose/UI tests, needs a connected device
 ```
 
-On Windows use `gradlew.bat`. CI runs `testDebugUnitTest` and `assembleDebug` for every push to
-`main` and every pull request; the connected suite is expected to pass locally before a UI change
-is merged.
+On Windows use `gradlew.bat`. For every push to `main` and every pull request, CI runs
+`testDebugUnitTest`, `assembleDebug`, `lintDebug`, and the Compose suite on an API 36 emulator.
 
 ## Making a change
 

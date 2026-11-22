@@ -196,8 +196,12 @@ Latest run on the Nothing Phone (3a) Lite (`A001T`, Android 16 / API 36):
 | --- | --- |
 | `testDebugUnitTest` | 100 tests, 0 failures, 0 skipped |
 | `connectedDebugAndroidTest` | 9 tests, 0 failures |
+| `lintDebug` | success |
 | `assembleDebug` | success — `releases/FocusTime-debug.apk` (10.8 MB) |
 | `assembleRelease` | success — signed `app-release.apk` (7.4 MB) |
+
+CI runs the JVM tests, `lintDebug`, the debug build, and the Compose suite on an API 36 emulator
+for every push to `main` and every pull request; the debug APK is kept as a build artifact.
 
 The UI tests cover the countdown and session label, tap-to-start, the running/paused secondary
 controls, the duration stepper, the DND rows in Settings, the watch-face row with the low
