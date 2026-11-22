@@ -1,7 +1,8 @@
 # FocusTime
 
 A native Android Pomodoro timer with an iPhone-StandBy-inspired landscape clock and automatic
-Do Not Disturb, built for a Nothing Phone (3a) Lite (`A001T`, Android 16 / API 36).
+Do Not Disturb. Built for Android (API 26+), and tested on a Nothing Phone (3a) Lite (`A001T`,
+Android 16 / API 36).
 
 Kotlin · Jetpack Compose · Material 3 · MVVM · Coroutines/StateFlow · Preferences DataStore.
 No account, no network, no analytics, no ads.
