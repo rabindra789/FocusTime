@@ -1,8 +1,6 @@
 package com.rabindra.focustime.ui.landscape
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,9 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -26,9 +22,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -36,10 +35,18 @@ import com.rabindra.focustime.timer.SessionType
 import com.rabindra.focustime.timer.TimerState
 import com.rabindra.focustime.timer.TimerStatus
 import com.rabindra.focustime.ui.components.QuietAction
+import com.rabindra.focustime.ui.components.ResetSessionDialog
+import com.rabindra.focustime.ui.components.SessionInfoPanel
+import com.rabindra.focustime.ui.components.SessionQuickActions
+import com.rabindra.focustime.ui.components.SkipSessionDialog
 import com.rabindra.focustime.ui.components.ThinProgress
+import com.rabindra.focustime.ui.components.sessionName
+import com.rabindra.focustime.ui.gesture.clockGestures
+import com.rabindra.focustime.ui.gesture.SwipeDirection
 import com.rabindra.focustime.ui.theme.FocusSpacing
 import com.rabindra.focustime.ui.theme.FocusType
 import com.rabindra.focustime.ui.theme.LocalFocusPalette
+import com.rabindra.focustime.ui.watchface.AnalogFace
 import com.rabindra.focustime.ui.watchface.CircularPomodoroFace
 import com.rabindra.focustime.ui.watchface.ForestFace
 import com.rabindra.focustime.ui.watchface.GrowingPlantFace
@@ -53,8 +60,10 @@ import kotlinx.coroutines.delay
 /**
  * Landscape desk clock.
  *
- * Five faces share the same quiet frame: tap for controls, swipe sideways to change face.
- * Controls fade after five quiet seconds and the display is kept awake only on this screen.
+ * Every face shares one gesture surface:
+ * tap shows or hides the controls, double tap pauses or resumes, a sideways swipe changes face,
+ * a long press opens quick actions, swiping up asks before skipping and swiping down shows the
+ * compact session panel. Controls fade after five quiet seconds.
  */
 @Composable
 fun LandscapeClockScreen(
@@ -72,6 +81,9 @@ fun LandscapeClockScreen(
     val reducedMotion = rememberReducedMotion()
     var controlsVisible by remember { mutableStateOf(false) }
     var confirmReset by remember { mutableStateOf(false) }
+    var confirmSkip by remember { mutableStateOf(false) }
+    var showActions by remember { mutableStateOf(false) }
+    var showInfo by remember { mutableStateOf(false) }
     var faceHint by remember { mutableStateOf<WatchFace?>(null) }
     var now by remember { mutableStateOf(LocalTime.now()) }
 
@@ -88,6 +100,14 @@ fun LandscapeClockScreen(
         if (controlsVisible) {
             delay(5_000)
             controlsVisible = false
+        }
+    }
+
+    // The session panel is a glance, not a screen; it folds away on its own.
+    LaunchedEffect(showInfo) {
+        if (showInfo) {
+            delay(6_000)
+            showInfo = false
         }
     }
 
@@ -114,138 +134,202 @@ fun LandscapeClockScreen(
         onWatchFaceChange(next)
     }
 
-    // The face and the controls get separate strips, so a button tap can never be mistaken
-    // for a tap on the clock (or the other way round).
-    Column(
+    Box(
         modifier
             .fillMaxSize()
             .background(palette.background),
     ) {
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .pointerInput(watchFace) {
-                    var dragged = 0f
-                    detectHorizontalDragGestures(
-                        onDragEnd = {
-                            if (dragged > 60f) changeFace(watchFace.previous())
-                            if (dragged < -60f) changeFace(watchFace.next())
-                            dragged = 0f
+        Column(Modifier.fillMaxSize()) {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .clockGestures(
+                        onTap = {
+                            showInfo = false
+                            controlsVisible = !controlsVisible
                         },
-                        onDragCancel = { dragged = 0f },
-                        onHorizontalDrag = { _, amount -> dragged += amount },
+                        onDoubleTap = {
+                            showInfo = false
+                            controlsVisible = false
+                            onStartPause()
+                        },
+                        onLongPress = {
+                            controlsVisible = false
+                            showInfo = false
+                            showActions = true
+                        },
+                        onSwipe = { direction ->
+                            when (direction) {
+                                SwipeDirection.LEFT -> changeFace(watchFace.next())
+                                SwipeDirection.RIGHT -> changeFace(watchFace.previous())
+                                SwipeDirection.UP -> {
+                                    controlsVisible = false
+                                    showInfo = false
+                                    confirmSkip = true
+                                }
+                                SwipeDirection.DOWN -> {
+                                    controlsVisible = false
+                                    showInfo = true
+                                }
+                            }
+                        },
+                    )
+                    .semantics {
+                        contentDescription = "Clock"
+                        onClick(label = "Show or hide controls") {
+                            controlsVisible = !controlsVisible
+                            true
+                        }
+                        customActions = listOf(
+                            CustomAccessibilityAction(
+                                if (state.status == TimerStatus.RUNNING) "Pause session"
+                                else "Resume session",
+                            ) {
+                                onStartPause()
+                                true
+                            },
+                            CustomAccessibilityAction("Skip session") {
+                                confirmSkip = true
+                                true
+                            },
+                            CustomAccessibilityAction("Reset session") {
+                                confirmReset = true
+                                true
+                            },
+                        )
+                    }
+                    .testTag("clock-gestures"),
+            ) {
+                when (watchFace) {
+                    WatchFace.DESK_CLOCK -> DeskClockFace(state, remainingMillis, clock)
+                    WatchFace.ANALOG -> AnalogFace(
+                        state = state,
+                        remainingMillis = remainingMillis,
+                        clock = clock,
+                        time = now,
+                        reducedMotion = reducedMotion,
+                    )
+
+                    WatchFace.CIRCULAR_POMODORO -> CircularPomodoroFace(
+                        state = state,
+                        remainingMillis = remainingMillis,
+                        clock = clock,
+                        reducedMotion = reducedMotion,
+                    )
+
+                    WatchFace.GROWING_PLANT -> GrowingPlantFace(
+                        state = state,
+                        remainingMillis = remainingMillis,
+                        clock = clock,
+                        reducedMotion = reducedMotion,
+                    )
+
+                    WatchFace.MORSE_CODE -> MorseCodeFace(
+                        state = state,
+                        remainingMillis = remainingMillis,
+                        clock = clock,
+                        time = now,
+                        use24Hour = use24Hour,
+                    )
+
+                    WatchFace.FOREST -> ForestFace(
+                        state = state,
+                        remainingMillis = remainingMillis,
+                        clock = clock,
+                        reducedMotion = reducedMotion,
                     )
                 }
-                .pointerInput(Unit) {
-                    detectTapGestures(onTap = { controlsVisible = !controlsVisible })
-                },
-        ) {
-        when (watchFace) {
-            WatchFace.DESK_CLOCK -> DeskClockFace(state, remainingMillis, clock)
-            WatchFace.CIRCULAR_POMODORO -> CircularPomodoroFace(
-                state = state,
-                remainingMillis = remainingMillis,
-                clock = clock,
-                reducedMotion = reducedMotion,
-            )
 
-            WatchFace.GROWING_PLANT -> GrowingPlantFace(
-                state = state,
-                remainingMillis = remainingMillis,
-                clock = clock,
-                reducedMotion = reducedMotion,
-            )
+                faceHint?.let { hint ->
+                    Text(
+                        text = hint.label,
+                        style = FocusType.caption,
+                        color = palette.textSecondary,
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = FocusSpacing.md)
+                            .semantics { contentDescription = "Watch face ${hint.label}" },
+                    )
+                }
 
-            WatchFace.MORSE_CODE -> MorseCodeFace(
-                state = state,
-                remainingMillis = remainingMillis,
-                clock = clock,
-                time = now,
-                use24Hour = use24Hour,
-            )
+                if (showInfo) {
+                    SessionInfoPanel(
+                        state = state,
+                        remainingMillis = remainingMillis,
+                        modifier = Modifier.align(Alignment.Center),
+                    )
+                }
+            }
 
-            WatchFace.FOREST -> ForestFace(
-                state = state,
-                remainingMillis = remainingMillis,
-                clock = clock,
-                reducedMotion = reducedMotion,
-            )
-        }
-
-        faceHint?.let { hint ->
-            Text(
-                text = hint.label,
-                style = FocusType.caption,
-                color = palette.textSecondary,
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = FocusSpacing.md)
-                    .semantics { contentDescription = "Watch face ${hint.label}" },
-            )
-        }
-        }
-
-        if (controlsVisible) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    // Clear of the system's bottom gesture strip in landscape.
-                    .padding(bottom = FocusSpacing.lg, top = FocusSpacing.xs),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically,
+            if (controlsVisible) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        // Clear of the system's bottom gesture strip in landscape.
+                        .padding(bottom = FocusSpacing.lg, top = FocusSpacing.xs),
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    QuietAction(
-                        label = if (state.status == TimerStatus.RUNNING) "Pause" else "Resume",
-                        onClick = onStartPause,
-                        color = palette.accent,
-                    )
-                    Spacer(Modifier.width(FocusSpacing.sm))
-                    QuietAction(label = "Skip", onClick = onSkip)
-                    Spacer(Modifier.width(FocusSpacing.sm))
-                    QuietAction(
-                        label = "Reset",
-                        onClick = {
-                            controlsVisible = false
-                            confirmReset = true
-                        },
-                    )
-                    Spacer(Modifier.width(FocusSpacing.sm))
-                    QuietAction(
-                        label = "Face",
-                        onClick = { changeFace(watchFace.next()) },
-                    )
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        QuietAction(
+                            label = if (state.status == TimerStatus.RUNNING) "Pause" else "Resume",
+                            onClick = onStartPause,
+                            color = palette.accent,
+                        )
+                        Spacer(Modifier.width(FocusSpacing.sm))
+                        QuietAction(label = "Skip", onClick = { confirmSkip = true })
+                        Spacer(Modifier.width(FocusSpacing.sm))
+                        QuietAction(
+                            label = "Reset",
+                            onClick = {
+                                controlsVisible = false
+                                confirmReset = true
+                            },
+                        )
+                        Spacer(Modifier.width(FocusSpacing.sm))
+                        QuietAction(
+                            label = "Face",
+                            onClick = { changeFace(watchFace.next()) },
+                        )
+                    }
                 }
             }
         }
 
+        if (showActions) {
+            SessionQuickActions(
+                onSkip = {
+                    showActions = false
+                    confirmSkip = true
+                },
+                onReset = {
+                    showActions = false
+                    confirmReset = true
+                },
+                onDismiss = { showActions = false },
+            )
+        }
+
         if (confirmReset) {
-            AlertDialog(
-                onDismissRequest = { confirmReset = false },
-                title = { Text("Reset session?", color = palette.textPrimary) },
-                text = {
-                    Text(
-                        "The current countdown will start over.",
-                        color = palette.textSecondary,
-                    )
+            ResetSessionDialog(
+                onConfirm = {
+                    confirmReset = false
+                    onReset()
                 },
-                confirmButton = {
-                    TextButton(onClick = {
-                        confirmReset = false
-                        onReset()
-                    }) {
-                        Text("Reset", color = palette.alert)
-                    }
+                onDismiss = { confirmReset = false },
+            )
+        }
+
+        if (confirmSkip) {
+            SkipSessionDialog(
+                onConfirm = {
+                    confirmSkip = false
+                    onSkip()
                 },
-                dismissButton = {
-                    TextButton(onClick = { confirmReset = false }) {
-                        Text("Keep going", color = palette.textSecondary)
-                    }
-                },
-                containerColor = palette.surface,
+                onDismiss = { confirmSkip = false },
             )
         }
     }
@@ -309,7 +393,7 @@ private fun DeskClockFace(
             )
             Spacer(Modifier.height(FocusSpacing.sm))
             Text(
-                text = sessionLabel(state),
+                text = "${sessionName(state)} · ${state.sessionNumber}",
                 style = FocusType.caption,
                 color = palette.textSecondary,
             )
@@ -323,13 +407,4 @@ private fun DeskClockFace(
             )
         }
     }
-}
-
-private fun sessionLabel(state: TimerState): String {
-    val name = when (state.sessionType) {
-        SessionType.FOCUS -> "Focus"
-        SessionType.SHORT_BREAK -> "Short break"
-        SessionType.LONG_BREAK -> "Long break"
-    }
-    return "$name · ${state.sessionNumber}"
 }

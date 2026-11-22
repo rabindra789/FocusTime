@@ -36,6 +36,11 @@ class FocusTimeViewModel(private val container: AppContainer) : ViewModel() {
     val settings: StateFlow<AppSettings> = container.settingsRepository.settings
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AppSettings())
 
+    /** False until DataStore has answered, so onboarding never flashes on an existing install. */
+    val settingsLoaded: StateFlow<Boolean> = container.settingsRepository.settings
+        .map { true }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
     val statistics: StateFlow<StatisticsUi> = container.statisticsRepository.days
         .map { days -> days.toUi(LocalDate.now()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), StatisticsUi())

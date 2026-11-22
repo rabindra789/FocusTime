@@ -1,12 +1,15 @@
 package com.rabindra.focustime
 
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.doubleClick
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
-import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.rabindra.focustime.data.AppSettings
 import com.rabindra.focustime.timer.SessionType
@@ -17,7 +20,6 @@ import com.rabindra.focustime.ui.settings.SettingsScreen
 import com.rabindra.focustime.ui.theme.FocusTimeTheme
 import com.rabindra.focustime.watchface.WatchFace
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -55,7 +57,6 @@ class DashboardUiTest {
                     onReset = onReset,
                     onSkip = onSkip,
                     onSettings = {},
-                    showTutorial = false,
                 )
             }
         }
@@ -70,11 +71,24 @@ class DashboardUiTest {
     }
 
     @Test
-    fun tappingTimerTogglesPause() {
-        var toggled = false
-        showDashboard(idleState(), onToggle = { toggled = true })
-        rule.onNodeWithContentDescription("Timer").performClick()
-        rule.runOnIdle { assertTrue(toggled) }
+    fun tappingRevealsControlsWithoutStarting() {
+        var toggles = 0
+        showDashboard(idleState(), onToggle = { toggles++ })
+        rule.onNodeWithTag("clock-gestures").performTouchInput { down(center); up() }
+        rule.mainClock.advanceTimeBy(400)
+        rule.waitForIdle()
+        rule.runOnIdle { assertEquals(0, toggles) }
+        rule.onAllNodesWithText("Start").assertCountEquals(1)
+    }
+
+    @Test
+    fun doubleTapStartsWithoutOpeningControls() {
+        var toggles = 0
+        showDashboard(idleState(), onToggle = { toggles++ })
+        rule.onNodeWithTag("clock-gestures")
+            .performTouchInput { doubleClick() }
+        rule.runOnIdle { assertEquals(1, toggles) }
+        rule.onAllNodesWithText("Start").assertCountEquals(0)
     }
 
     @Test
@@ -140,7 +154,7 @@ class DashboardUiTest {
         rule.onNodeWithText("Low power mode").performScrollTo().assertIsDisplayed()
         rule.onNodeWithText("Landscape watch face").performScrollTo().performClick()
         rule.runOnIdle {
-            assertEquals(WatchFace.CIRCULAR_POMODORO, updated?.watchFace)
+            assertEquals(WatchFace.ANALOG, updated?.watchFace)
         }
     }
 

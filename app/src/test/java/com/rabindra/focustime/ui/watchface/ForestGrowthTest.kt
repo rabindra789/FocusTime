@@ -32,12 +32,21 @@ class ForestGrowthTest {
     }
 
     @Test
-    fun forestIsTheFifthFaceAndItsStoredIdIsStable() {
-        assertEquals(5, WatchFace.entries.size)
+    fun storedFaceIdsAreStable() {
+        assertEquals(6, WatchFace.entries.size)
         assertEquals(WatchFace.FOREST, WatchFace.fromId("forest"))
+        assertEquals(WatchFace.ANALOG, WatchFace.fromId("analog"))
         assertEquals("forest", WatchFace.FOREST.id)
+        assertEquals("analog", WatchFace.ANALOG.id)
         assertEquals(WatchFace.FOREST, WatchFace.MORSE_CODE.next())
         assertEquals(WatchFace.DESK_CLOCK, WatchFace.FOREST.next())
         assertEquals(WatchFace.MORSE_CODE, WatchFace.FOREST.previous())
+    }
+
+    @Test
+    fun analogSitsBetweenDeskClockAndCircular() {
+        assertEquals(WatchFace.ANALOG, WatchFace.DESK_CLOCK.next())
+        assertEquals(WatchFace.CIRCULAR_POMODORO, WatchFace.ANALOG.next())
+        assertEquals(WatchFace.DESK_CLOCK, WatchFace.ANALOG.previous())
     }
 }

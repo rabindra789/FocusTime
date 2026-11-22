@@ -29,6 +29,7 @@ import com.rabindra.focustime.ui.settings.SettingsScreen
 import com.rabindra.focustime.ui.statistics.StatisticsScreen
 import com.rabindra.focustime.ui.theme.LowPowerPalette
 import com.rabindra.focustime.ui.theme.LocalFocusPalette
+import com.rabindra.focustime.ui.tutorial.TutorialScreen
 
 private enum class PortraitScreen { Timer, Statistics, Settings, About }
 
@@ -67,6 +68,7 @@ fun FocusTimeApp(viewModel: FocusTimeViewModel) {
     val state by viewModel.state.collectAsState()
     val remaining by viewModel.remainingMillis.collectAsState()
     val settings by viewModel.settings.collectAsState()
+    val settingsLoaded by viewModel.settingsLoaded.collectAsState()
     val dndAccess by viewModel.dndAccess.collectAsState()
 
     val configuration = LocalConfiguration.current
@@ -81,62 +83,73 @@ fun FocusTimeApp(viewModel: FocusTimeViewModel) {
     val context = LocalContext.current
 
     CompositionLocalProvider(LocalFocusPalette provides palette) {
-        if (isLandscape) {
-            LandscapeClockScreen(
-                state = state,
-                remainingMillis = remaining,
-                use24Hour = settings.use24Hour,
-                onStartPause = viewModel::toggleTimer,
-                onSkip = viewModel::skipSession,
-                onReset = viewModel::resetTimer,
-                watchFace = settings.watchFace,
-                onWatchFaceChange = { face ->
-                    viewModel.updateSettings { it.copy(watchFace = face) }
-                },
-            )
-            return@CompositionLocalProvider
-        }
-
-        var screen by remember { mutableStateOf(PortraitScreen.Timer) }
-
         Box(Modifier.fillMaxSize().background(palette.background)) {
-            when (screen) {
-                PortraitScreen.Timer -> DashboardScreen(
+            if (isLandscape) {
+                LandscapeClockScreen(
                     state = state,
                     remainingMillis = remaining,
+                    use24Hour = settings.use24Hour,
                     onStartPause = viewModel::toggleTimer,
-                    onReset = viewModel::resetTimer,
                     onSkip = viewModel::skipSession,
-                    onSettings = { screen = PortraitScreen.Settings },
-                    onStatistics = { screen = PortraitScreen.Statistics },
-                    keepScreenOn = settings.keepScreenOn,
-                    showTutorial = !settings.tutorialCompleted,
-                    onTutorialDone = {
+                    onReset = viewModel::resetTimer,
+                    watchFace = settings.watchFace,
+                    onWatchFaceChange = { face ->
+                        viewModel.updateSettings { it.copy(watchFace = face) }
+                    },
+                )
+            } else {
+                var screen by remember { mutableStateOf(PortraitScreen.Timer) }
+
+                when (screen) {
+                    PortraitScreen.Timer -> DashboardScreen(
+                        state = state,
+                        remainingMillis = remaining,
+                        onStartPause = viewModel::toggleTimer,
+                        onReset = viewModel::resetTimer,
+                        onSkip = viewModel::skipSession,
+                        onSettings = { screen = PortraitScreen.Settings },
+                        onStatistics = { screen = PortraitScreen.Statistics },
+                        keepScreenOn = settings.keepScreenOn,
+                        watchFace = settings.watchFace,
+                        onWatchFaceChange = { face ->
+                            viewModel.updateSettings { it.copy(watchFace = face) }
+                        },
+                    )
+
+                    PortraitScreen.Statistics -> StatisticsScreen(
+                        statistics = viewModel.statistics.collectAsState().value,
+                        onBack = { screen = PortraitScreen.Timer },
+                    )
+
+                    PortraitScreen.Settings -> SettingsScreen(
+                        settings = settings,
+                        dndAccess = dndAccess,
+                        onUpdate = { transform -> viewModel.updateSettings(transform) },
+                        onResetStatistics = viewModel::resetStatistics,
+                        onRefreshDndAccess = viewModel::refreshDndAccess,
+                        onOpenDndSettings = {
+                            runCatching { context.startActivity(viewModel.dndSettingsIntent()) }
+                            viewModel.refreshDndAccess()
+                        },
+                        onBack = { screen = PortraitScreen.Timer },
+                        onAbout = { screen = PortraitScreen.About },
+                    )
+
+                    PortraitScreen.About -> AboutScreen(
+                        onBack = { screen = PortraitScreen.Settings },
+                    )
+                }
+            }
+
+            // One host for the guide, so rotation cannot leave half a tutorial behind.
+            if (settingsLoaded && !settings.tutorialCompleted) {
+                TutorialScreen(
+                    onComplete = {
                         viewModel.updateSettings { it.copy(tutorialCompleted = true) }
                     },
-                )
-
-                PortraitScreen.Statistics -> StatisticsScreen(
-                    statistics = viewModel.statistics.collectAsState().value,
-                    onBack = { screen = PortraitScreen.Timer },
-                )
-
-                PortraitScreen.Settings -> SettingsScreen(
-                    settings = settings,
-                    dndAccess = dndAccess,
-                    onUpdate = { transform -> viewModel.updateSettings(transform) },
-                    onResetStatistics = viewModel::resetStatistics,
-                    onRefreshDndAccess = viewModel::refreshDndAccess,
-                    onOpenDndSettings = {
-                        runCatching { context.startActivity(viewModel.dndSettingsIntent()) }
-                        viewModel.refreshDndAccess()
+                    onSkip = {
+                        viewModel.updateSettings { it.copy(tutorialCompleted = true) }
                     },
-                    onBack = { screen = PortraitScreen.Timer },
-                    onAbout = { screen = PortraitScreen.About },
-                )
-
-                PortraitScreen.About -> AboutScreen(
-                    onBack = { screen = PortraitScreen.Settings },
                 )
             }
         }
