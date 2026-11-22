@@ -1,5 +1,7 @@
 # FocusTime
 
+[![CI](https://github.com/rabindra789/FocusTime/actions/workflows/ci.yml/badge.svg)](https://github.com/rabindra789/FocusTime/actions/workflows/ci.yml)
+
 A native Android Pomodoro timer with an iPhone-StandBy-inspired landscape clock and automatic
 Do Not Disturb. Built for Android (API 26+), and tested on a Nothing Phone (3a) Lite (`A001T`,
 Android 16 / API 36).
@@ -184,7 +186,7 @@ build but a different signing key, so uninstall the debug build before switching
 ## Tests
 
 ```powershell
-.\gradlew.bat testDebugUnitTest          # 79 JVM tests
+.\gradlew.bat testDebugUnitTest          # 82 JVM tests
 .\gradlew.bat connectedDebugAndroidTest  # 9 Compose UI tests on a device
 ```
 
@@ -192,7 +194,7 @@ Latest run on the Nothing Phone (3a) Lite (`A001T`, Android 16 / API 36):
 
 | Suite | Result |
 | --- | --- |
-| `testDebugUnitTest` | 79 tests, 0 failures, 0 skipped |
+| `testDebugUnitTest` | 82 tests, 0 failures, 0 skipped |
 | `connectedDebugAndroidTest` | 9 tests, 0 failures |
 | `assembleDebug` | success — `releases/FocusTime-debug.apk` (10.8 MB) |
 | `assembleRelease` | success — signed `app-release.apk` (7.4 MB) |
@@ -201,7 +203,8 @@ The UI tests cover the countdown and session label, tap-to-start, the running/pa
 controls, the duration stepper, the DND rows in Settings, the watch-face row with the low
 power toggle, and the About screen's creator, version and in-app licence text.
 
-The unit tests now include regressions for the timer reset bugs: a new focus session starts at the
+The unit tests also cover the persisted watch-face ids and their cyclic next/previous order, and
+include regressions for the timer reset bugs: a new focus session starts at the
 configured duration, elapsed time never carries into a new cycle, reset restores the configured
 duration, changing durations while paused clamps the paused remainder, and focus-to-break
 transitions rebuild a fresh break length. They also cover `TimerState.progressAt` (the live
@@ -311,9 +314,17 @@ FocusTime is written by **Rabindra Kumar Meher** —
 [rabindrameher116@gmail.com](mailto:rabindrameher116@gmail.com).
 
 The app source is released under the [MIT License](LICENSE), © 2026 Rabindra Kumar Meher.
+Contributions are welcome; read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
 The Nunito Sans typeface is used under the SIL Open Font License 1.1; the full text ships in
 [`licenses/NunitoSans-OFL.txt`](licenses/NunitoSans-OFL.txt). Both licences are readable in the
 app under Settings → About FocusTime.
+
+## Supporting FocusTime
+
+FocusTime is free, offline and ad-free. If it earns a place in your workday, you can sponsor its
+continued development through the **Sponsor** button at the top of the repository or at
+[github.com/sponsors/rabindra789](https://github.com/sponsors/rabindra789). Sponsorship is optional
+and does not affect the app or its MIT licence.
 
 ## Known limitations
 
