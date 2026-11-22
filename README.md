@@ -6,6 +6,10 @@ Do Not Disturb, built for a Nothing Phone (3a) Lite (`A001T`, Android 16 / API 3
 Kotlin · Jetpack Compose · Material 3 · MVVM · Coroutines/StateFlow · Preferences DataStore.
 No account, no network, no analytics, no ads.
 
+Created by [Rabindra Kumar Meher](https://github.com/rabindra789) and released under the
+[MIT License](LICENSE). Download the signed APK from
+[Releases](https://github.com/rabindra789/FocusTime/releases/latest).
+
 | Portrait timer (low power) | Landscape desk clock |
 | --- | --- |
 | ![Portrait](releases/device-portrait-lowpower.png) | ![Clock](releases/device-landscape.png) |
@@ -21,6 +25,8 @@ No account, no network, no analytics, no ads.
 | ![Controls](releases/device-landscape-controls.png) | ![Settings](releases/device-settings.png) |
 | **Reset confirmation** | **First-run tutorial** |
 | ![Reset](releases/device-reset-confirm.png) | ![Tutorial](releases/device-tutorial.png) |
+| **About** | |
+| ![About](releases/device-about.png) | |
 
 All screenshots are from a Nothing Phone (3a) Lite in the current build; the portrait shot shows
 **Low power mode** on.
@@ -159,11 +165,26 @@ adb shell am start -n com.rabindra.focustime/.MainActivity
 The build also produces `app/build/outputs/apk/debug/app-debug.apk`.
 `releases/FocusTime-debug.apk` is a copy of that debug build.
 
+For a signed release build:
+
+```powershell
+.\gradlew.bat assembleRelease
+# app/build/outputs/apk/release/app-release.apk
+```
+
+## Download
+
+Every published build is attached to a
+[GitHub release](https://github.com/rabindra789/FocusTime/releases); the current one is
+`FocusTime-1.1.0.apk` (signed, `versionCode` 2). Sideload it with
+`adb install -r FocusTime-1.1.0.apk`. The release build uses the same application id as the debug
+build but a different signing key, so uninstall the debug build before switching.
+
 ## Tests
 
 ```powershell
 .\gradlew.bat testDebugUnitTest          # 79 JVM tests
-.\gradlew.bat connectedDebugAndroidTest  # 7 Compose UI tests on a device
+.\gradlew.bat connectedDebugAndroidTest  # 9 Compose UI tests on a device
 ```
 
 Latest run on the Nothing Phone (3a) Lite (`A001T`, Android 16 / API 36):
@@ -171,12 +192,13 @@ Latest run on the Nothing Phone (3a) Lite (`A001T`, Android 16 / API 36):
 | Suite | Result |
 | --- | --- |
 | `testDebugUnitTest` | 79 tests, 0 failures, 0 skipped |
-| `connectedDebugAndroidTest` | 7 tests, 0 failures |
+| `connectedDebugAndroidTest` | 9 tests, 0 failures |
 | `assembleDebug` | success — `releases/FocusTime-debug.apk` (10.8 MB) |
+| `assembleRelease` | success — signed `app-release.apk` (7.4 MB) |
 
 The UI tests cover the countdown and session label, tap-to-start, the running/paused secondary
-controls, the duration stepper, the DND rows in Settings, and the watch-face row with the low
-power toggle.
+controls, the duration stepper, the DND rows in Settings, the watch-face row with the low
+power toggle, and the About screen's creator, version and in-app licence text.
 
 The unit tests now include regressions for the timer reset bugs: a new focus session starts at the
 configured duration, elapsed time never carries into a new cycle, reset restores the configured
@@ -263,30 +285,34 @@ apps that declare `ACCESS_NOTIFICATION_POLICY` (this was fixed during device tes
 
 ## Release signing
 
-No signing configuration is included, so `assembleRelease` produces
-`app/build/outputs/apk/release/app-release-unsigned.apk`, which is **not installable**. To sign
-securely, create a keystore outside the repo and read credentials from environment variables or
-`~/.gradle/gradle.properties` — never commit them:
+The release build is signed from `keystore.properties` in the repo root, which is **not
+committed**, together with the keystore it points at:
 
-```powershell
-keytool -genkeypair -v -keystore "$env:USERPROFILE\focustime-release.jks" `
-  -alias focustime -keyalg RSA -keysize 4096 -validity 10000
+```properties
+storeFile=keystore/focustime-release.jks
+storePassword=…
+keyAlias=focustime
+keyPassword=…
 ```
 
-```kotlin
-// app/build.gradle.kts
-android {
-    signingConfigs {
-        create("release") {
-            storeFile = file(System.getenv("FOCUSTIME_KEYSTORE") ?: "missing.jks")
-            storePassword = System.getenv("FOCUSTIME_STORE_PASSWORD")
-            keyAlias = "focustime"
-            keyPassword = System.getenv("FOCUSTIME_KEY_PASSWORD")
-        }
-    }
-    buildTypes { release { signingConfig = signingConfigs.getByName("release") } }
-}
-```
+Both `keystore.properties` and `keystore/` are listed in `.gitignore`. `app/build.gradle.kts`
+reads the file when it exists and signs the `release` build type with it; without the file,
+`assembleRelease` falls back to an unsigned APK. Keep the keystore and its password backed up:
+losing them means future builds cannot upgrade an installed release.
+
+Certificate (SHA-256):
+`5D:5E:50:E0:ED:1F:C1:75:81:FA:B3:F1:D1:A8:ED:07:FC:3B:7F:D5:91:5E:52:BE:4E:74:95:1C:3E:02:30:38`.
+
+## Creator and license
+
+FocusTime is written by **Rabindra Kumar Meher** —
+[github.com/rabindra789](https://github.com/rabindra789),
+[rabindrameher116@gmail.com](mailto:rabindrameher116@gmail.com).
+
+The app source is released under the [MIT License](LICENSE), © 2026 Rabindra Kumar Meher.
+The Nunito Sans typeface is used under the SIL Open Font License 1.1; the full text ships in
+[`licenses/NunitoSans-OFL.txt`](licenses/NunitoSans-OFL.txt). Both licences are readable in the
+app under Settings → About FocusTime.
 
 ## Known limitations
 

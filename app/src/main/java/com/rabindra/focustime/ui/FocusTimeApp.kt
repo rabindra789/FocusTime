@@ -22,6 +22,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.rabindra.focustime.FocusTimeViewModel
+import com.rabindra.focustime.ui.about.AboutScreen
 import com.rabindra.focustime.ui.dashboard.DashboardScreen
 import com.rabindra.focustime.ui.landscape.LandscapeClockScreen
 import com.rabindra.focustime.ui.settings.SettingsScreen
@@ -29,7 +30,7 @@ import com.rabindra.focustime.ui.statistics.StatisticsScreen
 import com.rabindra.focustime.ui.theme.LowPowerPalette
 import com.rabindra.focustime.ui.theme.LocalFocusPalette
 
-private enum class PortraitScreen { Timer, Statistics, Settings }
+private enum class PortraitScreen { Timer, Statistics, Settings, About }
 
 /**
  * Keeps the status bar out of the way, and takes the navigation bar too when the
@@ -131,6 +132,11 @@ fun FocusTimeApp(viewModel: FocusTimeViewModel) {
                         viewModel.refreshDndAccess()
                     },
                     onBack = { screen = PortraitScreen.Timer },
+                    onAbout = { screen = PortraitScreen.About },
+                )
+
+                PortraitScreen.About -> AboutScreen(
+                    onBack = { screen = PortraitScreen.Settings },
                 )
             }
         }

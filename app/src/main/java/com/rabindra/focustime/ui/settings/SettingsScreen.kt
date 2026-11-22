@@ -37,6 +37,7 @@ fun SettingsScreen(
     onOpenDndSettings: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    onAbout: () -> Unit = {},
 ) {
     val palette = LocalFocusPalette.current
 
@@ -201,8 +202,8 @@ fun SettingsScreen(
             onClick = onResetStatistics,
         )
         SettingsRow(
-            label = "FocusTime",
-            value = "A quiet desk clock",
+            label = "About FocusTime",
+            onClick = onAbout,
         )
 
         Spacer(Modifier.height(FocusSpacing.huge))

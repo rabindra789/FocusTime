@@ -10,5 +10,7 @@ build/
 .cxx
 local.properties
 .debug/
+keystore.properties
+keystore/
 /releases/*.apk
 !releases/FocusTime-debug.apk
