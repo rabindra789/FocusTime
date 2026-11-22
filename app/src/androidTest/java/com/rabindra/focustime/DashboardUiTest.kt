@@ -159,7 +159,7 @@ class DashboardUiTest {
                 )
             }
         }
-        rule.onNodeWithText("Automatic Do Not Disturb").assertIsDisplayed()
-        rule.onNodeWithText("GRANT").assertIsDisplayed()
+        rule.onNodeWithText("Automatic Do Not Disturb").performScrollTo().assertIsDisplayed()
+        rule.onNodeWithText("GRANT").performScrollTo().assertIsDisplayed()
     }
 }
