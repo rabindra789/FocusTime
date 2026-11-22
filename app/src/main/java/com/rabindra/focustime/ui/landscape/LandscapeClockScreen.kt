@@ -41,6 +41,7 @@ import com.rabindra.focustime.ui.theme.FocusSpacing
 import com.rabindra.focustime.ui.theme.FocusType
 import com.rabindra.focustime.ui.theme.LocalFocusPalette
 import com.rabindra.focustime.ui.watchface.CircularPomodoroFace
+import com.rabindra.focustime.ui.watchface.ForestFace
 import com.rabindra.focustime.ui.watchface.GrowingPlantFace
 import com.rabindra.focustime.ui.watchface.MorseCodeFace
 import com.rabindra.focustime.ui.watchface.rememberReducedMotion
@@ -52,7 +53,7 @@ import kotlinx.coroutines.delay
 /**
  * Landscape desk clock.
  *
- * Four faces share the same quiet frame: tap for controls, swipe sideways to change face.
+ * Five faces share the same quiet frame: tap for controls, swipe sideways to change face.
  * Controls fade after five quiet seconds and the display is kept awake only on this screen.
  */
 @Composable
@@ -162,6 +163,13 @@ fun LandscapeClockScreen(
                 clock = clock,
                 time = now,
                 use24Hour = use24Hour,
+            )
+
+            WatchFace.FOREST -> ForestFace(
+                state = state,
+                remainingMillis = remainingMillis,
+                clock = clock,
+                reducedMotion = reducedMotion,
             )
         }
 

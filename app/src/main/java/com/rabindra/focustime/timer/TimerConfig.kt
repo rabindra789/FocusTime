@@ -5,7 +5,7 @@ data class TimerConfig(
     val shortBreakMinutes: Int = 5,
     val longBreakMinutes: Int = 15,
     val longBreakInterval: Int = 4,
-    val autoStartBreaks: Boolean = false,
+    val autoStartBreaks: Boolean = true,
     val autoStartFocus: Boolean = false,
 ) {
     fun durationMillis(type: SessionType): Long = when (type) {

@@ -65,6 +65,7 @@ class PomodoroController(
             mutex.withLock {
                 if (initialized) return@withLock
                 initialized = true
+                settingsRepository.applyAutomaticFlowDefault()
                 restoreLocked()
             }
             _ready.value = true
@@ -126,8 +127,13 @@ class PomodoroController(
             val result = TimerRecovery.reconcile(persisted, config, nowWall())
             applyState(result.state)
             if (result.completedFocus) recordFocus(result.completedFocusDurationMillis)
+            result.completedSession?.let {
+                notifier.notifySessionCompleted(it, result.state.sessionType)
+            }
             if (result.state.status == TimerStatus.RUNNING) {
                 alarmScheduler.schedule(result.state.endWallClockMillis)
+                // A session recovered in the running state needs the service that matches it.
+                startServiceInternal()
             } else {
                 alarmScheduler.cancel()
             }
@@ -222,8 +228,15 @@ class PomodoroController(
         alarmScheduler.cancel()
         applyState(result.state)
         if (result.completedFocus) recordFocus(result.completedFocusDurationMillis)
+        // The alarm and boot paths complete a session the ticker may never have seen. They owe the
+        // same side effects as the in-process completion: one alert, an alarm and service for the
+        // auto-started session, and DND that follows the new session type.
+        result.completedSession?.let {
+            notifier.notifySessionCompleted(it, result.state.sessionType)
+        }
         if (result.state.status == TimerStatus.RUNNING) {
             alarmScheduler.schedule(result.state.endWallClockMillis)
+            if (result.startedSession) startServiceInternal()
         }
         dndManager.reconcile(isFocusActive = isFocusRunning())
     }

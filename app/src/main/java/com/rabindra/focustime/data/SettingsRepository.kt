@@ -39,12 +39,26 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         }
     }
 
+    /**
+     * One-time upgrade to the new default: automatic breaks. Older builds defaulted both flow
+     * toggles to off and rewrote every preference on the first edit, so an existing install cannot
+     * be distinguished from a deliberate opt-out. The migration therefore turns automatic breaks
+     * on once, records that it ran, and every later manual choice is respected.
+     */
+    suspend fun applyAutomaticFlowDefault() {
+        dataStore.edit { prefs ->
+            if (prefs[KEY_AUTO_FLOW_DEFAULT] == true) return@edit
+            prefs[KEY_AUTO_BREAK] = true
+            prefs[KEY_AUTO_FLOW_DEFAULT] = true
+        }
+    }
+
     private fun Preferences.toSettings(): AppSettings = AppSettings(
         focusMinutes = this[KEY_FOCUS] ?: 25,
         shortBreakMinutes = this[KEY_SHORT] ?: 5,
         longBreakMinutes = this[KEY_LONG] ?: 15,
         longBreakInterval = this[KEY_INTERVAL] ?: 4,
-        autoStartBreaks = this[KEY_AUTO_BREAK] ?: false,
+        autoStartBreaks = this[KEY_AUTO_BREAK] ?: true,
         autoStartFocus = this[KEY_AUTO_FOCUS] ?: false,
         autoDnd = this[KEY_AUTO_DND] ?: true,
         dndMode = DndMode.fromKey(this[KEY_DND_MODE]),
@@ -71,6 +85,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         val KEY_INTERVAL = intPreferencesKey("long_break_interval")
         val KEY_AUTO_BREAK = booleanPreferencesKey("auto_start_breaks")
         val KEY_AUTO_FOCUS = booleanPreferencesKey("auto_start_focus")
+        val KEY_AUTO_FLOW_DEFAULT = booleanPreferencesKey("auto_flow_default_applied")
         val KEY_AUTO_DND = booleanPreferencesKey("auto_dnd")
         val KEY_DND_MODE = stringPreferencesKey("dnd_mode")
         val KEY_24H = booleanPreferencesKey("clock_24_hour")

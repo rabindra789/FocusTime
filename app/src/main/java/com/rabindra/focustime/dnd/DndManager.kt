@@ -101,7 +101,11 @@ class DndManager(
         }
     }
 
+    /**
+     * Keeps DND aligned with the real session, including a focus session that was restored or
+     * auto-started after process death. Re-applying is a no-op while FocusTime already owns it.
+     */
     suspend fun reconcile(isFocusActive: Boolean) {
-        if (!isFocusActive) releaseIfOwned()
+        if (isFocusActive) applyForFocus() else releaseIfOwned()
     }
 }

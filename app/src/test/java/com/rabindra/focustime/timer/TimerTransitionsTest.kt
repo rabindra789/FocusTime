@@ -150,7 +150,54 @@ class TimerTransitionsTest {
         val next = TimerTransitions.advance(focus, autoConfig, now + 25 * 60_000L, allowAutoStart = true)
         assertEquals(SessionType.SHORT_BREAK, next.sessionType)
         assertEquals(TimerStatus.RUNNING, next.status)
+        assertEquals(5 * 60_000L, next.remainingMillis)
         assertEquals(now + 30 * 60_000L, next.endWallClockMillis)
+    }
+
+    @Test
+    fun `automatic flow disabled leaves the next session idle`() {
+        val manual = config.copy(autoStartBreaks = false, autoStartFocus = false)
+        val focus = TimerTransitions.initialState(SessionType.FOCUS, manual, now).copy(
+            status = TimerStatus.RUNNING,
+        )
+        val next = TimerTransitions.advance(focus, manual, now + 25 * 60_000L)
+        assertEquals(SessionType.SHORT_BREAK, next.sessionType)
+        assertEquals(TimerStatus.IDLE, next.status)
+        assertEquals(5 * 60_000L, next.remainingMillis)
+        assertEquals(0L, next.endWallClockMillis)
+    }
+
+    @Test
+    fun `an auto started break begins at its full configured duration`() {
+        val autoConfig = config.copy(autoStartBreaks = true)
+        val focus = TimerTransitions.initialState(SessionType.FOCUS, autoConfig, now).copy(
+            status = TimerStatus.RUNNING,
+        )
+        val completedAt = now + 25 * 60_000L
+        val next = TimerTransitions.advance(focus, autoConfig, completedAt)
+        assertEquals(TimerStatus.RUNNING, next.status)
+        assertEquals(5 * 60_000L, next.durationMillis)
+        assertEquals(5 * 60_000L, next.remainingMillis)
+        assertEquals(completedAt + 5 * 60_000L, next.endWallClockMillis)
+        assertEquals(0f, next.progress, 0.001f)
+    }
+
+    @Test
+    fun `auto started focus keeps its configured duration and session number`() {
+        val autoConfig = config.copy(autoStartBreaks = true, autoStartFocus = true)
+        val breakState = TimerTransitions.initialState(SessionType.SHORT_BREAK, autoConfig, now).copy(
+            status = TimerStatus.RUNNING,
+            sessionNumber = 1,
+            cyclePosition = 1,
+        )
+        val completedAt = now + 5 * 60_000L
+        val focus = TimerTransitions.advance(breakState, autoConfig, completedAt)
+        assertEquals(SessionType.FOCUS, focus.sessionType)
+        assertEquals(TimerStatus.RUNNING, focus.status)
+        assertEquals(25 * 60_000L, focus.durationMillis)
+        assertEquals(25 * 60_000L, focus.remainingMillis)
+        assertEquals(completedAt + 25 * 60_000L, focus.endWallClockMillis)
+        assertEquals(2, focus.sessionNumber)
     }
 
     @Test

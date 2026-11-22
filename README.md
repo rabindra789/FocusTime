@@ -11,10 +11,16 @@ No account, no network, no analytics, no ads.
 | ![Portrait](releases/device-portrait-lowpower.png) | ![Clock](releases/device-landscape.png) |
 | **Circular Pomodoro** | **Growing plant** |
 | ![Circular](releases/device-face-circular.png) | ![Plant](releases/device-face-plant.png) |
-| **Morse code** | **Controls** |
-| ![Morse](releases/device-face-morse.png) | ![Controls](releases/device-landscape-controls.png) |
-| **Settings** | **Reset confirmation** |
-| ![Settings](releases/device-settings.png) | ![Reset](releases/device-reset-confirm.png) |
+| **Morse code** | **Forest · sapling** |
+| ![Morse](releases/device-face-morse.png) | ![Forest sapling](releases/device-face-forest-sapling.png) |
+| **Forest · growing** | **Forest · full canopy** |
+| ![Forest growing](releases/device-face-forest-growing.png) | ![Forest complete](releases/device-face-forest-complete.png) |
+| **Forest · short break** | **Forest · long break** |
+| ![Forest short break](releases/device-face-forest-short-break.png) | ![Forest long break](releases/device-face-forest-long-break.png) |
+| **Controls** | **Settings** |
+| ![Controls](releases/device-landscape-controls.png) | ![Settings](releases/device-settings.png) |
+| **Reset confirmation** | **First-run tutorial** |
+| ![Reset](releases/device-reset-confirm.png) | ![Tutorial](releases/device-tutorial.png) |
 
 All screenshots are from a Nothing Phone (3a) Lite in the current build; the portrait shot shows
 **Low power mode** on.
@@ -36,9 +42,9 @@ and no cards, streaks, charts or chrome.
 **Landscape**
 
 - A full-screen watch face with the wall clock as the hero and the session beside or beneath it.
-- **Four watch faces** — *Desk clock*, *Circular Pomodoro*, *Growing plant* and *Morse code*.
-  Swipe left/right anywhere on the face to move between them, or tap **Face** in the controls.
-  The choice is stored in DataStore and survives rotation, restarts and updates.
+- **Five watch faces** — *Desk clock*, *Circular Pomodoro*, *Growing plant*, *Morse code* and
+  *Forest*. Swipe left/right anywhere on the face to move between them, or tap **Face** in the
+  controls. The choice is stored in DataStore and survives rotation, restarts and updates.
 - The controls (pause/resume, skip, reset, face) live in their own strip below the face so they can
   never steal taps from it. Tap the face to show them; they fade after five seconds.
 - The **Circular** face keeps the clock dominant and adds a small ring that drains smoothly with
@@ -48,9 +54,28 @@ and no cards, streaks, charts or chrome.
 - The **Morse** face shows the Pomodoro countdown large, then encodes the wall clock in real Morse
   code under it — correct dot/dash spacing (1 : 3) and three-unit intra-character, seven-unit
   inter-word gaps. It is static: no random blinking.
+- The **Forest** face grows a single tree into a whole clearing: a sapling at the start of focus,
+  branches and leaf clusters opening with elapsed time, young trees at the edges appearing as the
+  session deepens, and a canopy along the top and bottom of the screen by the end. It is drawn on
+  a Compose `Canvas` from the session's own progress — there is no separate animation clock — with
+  a fixed hash placing every leaf, so the forest never reshuffles between frames. During a break
+  the greenery clears with the share of the break still to run, leaving a bare trunk by the end.
 - The status and navigation bars are hidden for a true full-screen clock, and the display is kept
   awake only while this screen is visible.
 - When the system animator scale is off (reduced motion), ring and plant snap instead of tweening.
+
+**Automatic flow**
+
+A finished focus hands over to its break without a tap, and a finished break can hand back to
+focus. **Start breaks automatically** is on by default; **Start focus automatically** is opt-in, so
+the next focus begins only when you have asked for that. Both live in Settings → Flow and are
+honoured everywhere the session advances — the in-process ticker, the session-end alarm, process
+recreation and reboot. Turning a toggle off is respected: manual pause, skip and reset never start
+anything on their own.
+
+This default changed after the first release. Because older builds wrote both toggles as `false`
+the first time any preference was saved, a one-time upgrade turns **Start breaks automatically** on
+for existing installs and records that it ran; every later choice you make is kept.
 
 **Tutorial**
 
@@ -64,8 +89,9 @@ Quiet rows only: duration steppers, flow toggles, DND toggle with a live **GRANT
 clock format, screen wake, sound/vibration, **Low power mode**, **Landscape watch face**, replay
 tutorial, reset statistics and about.
 
-Motion is limited to the countdown, the progress hairline, the watch-face transitions and the sheet
-reveal. No bounce, particles, gradients, glows or decorative backgrounds.
+Motion is limited to the countdown, the progress hairline, the forest and plant growth, the
+watch-face transitions and the sheet reveal. No bounce, particles, gradients, glows or decorative
+backgrounds. When the system animator scale is off, the ring, plant and forest snap between values.
 
 **Low power mode**
 
@@ -82,8 +108,12 @@ default.
   and reboots. No decrementing counter.
 - Rotate to landscape for a full-screen, immersive clock with the live session countdown beside it.
   The timer is never reset by rotation; the screen stays awake while the clock is visible.
-- Four landscape watch faces with persisted selection: desk clock, circular Pomodoro ring, growing
-  plant and an accurate Morse encoding of the local time.
+- Five landscape watch faces with persisted selection: desk clock, circular Pomodoro ring, growing
+  plant, an accurate Morse encoding of the local time, and a canvas-drawn forest that fills and
+  clears with the session.
+- Automatic session flow: a completed focus starts its short or long break immediately (and a
+  completed break starts the next focus when that is enabled), with the service, notification,
+  alarm and DND all following the new session.
 - Low power mode: pure-black, AMOLED-friendly palette with the LCD caveat documented in-app.
 - Correct session lifecycle: a new session always starts at the configured duration, pausing freezes
   the remainder, resuming continues from it, and resetting a focus starts a fresh cycle at the
@@ -132,7 +162,7 @@ The build also produces `app/build/outputs/apk/debug/app-debug.apk`.
 ## Tests
 
 ```powershell
-.\gradlew.bat testDebugUnitTest          # 69 JVM tests
+.\gradlew.bat testDebugUnitTest          # 79 JVM tests
 .\gradlew.bat connectedDebugAndroidTest  # 7 Compose UI tests on a device
 ```
 
@@ -140,7 +170,7 @@ Latest run on the Nothing Phone (3a) Lite (`A001T`, Android 16 / API 36):
 
 | Suite | Result |
 | --- | --- |
-| `testDebugUnitTest` | 69 tests, 0 failures, 0 skipped |
+| `testDebugUnitTest` | 79 tests, 0 failures, 0 skipped |
 | `connectedDebugAndroidTest` | 7 tests, 0 failures |
 | `assembleDebug` | success — `releases/FocusTime-debug.apk` (10.8 MB) |
 
@@ -152,8 +182,13 @@ The unit tests now include regressions for the timer reset bugs: a new focus ses
 configured duration, elapsed time never carries into a new cycle, reset restores the configured
 duration, changing durations while paused clamps the paused remainder, and focus-to-break
 transitions rebuild a fresh break length. They also cover `TimerState.progressAt` (the live
-remaining share used by the ring and plant), the plant's focus/break growth mapping, and the
-Morse encoder's dot/dash units and gaps.
+remaining share used by the ring and plant), the plant's focus/break growth mapping, the forest's
+growth and clearing mapping with its stable face id, and the Morse encoder's dot/dash units and
+gaps. Automatic flow is covered end to end at the state-machine level: a completed focus starts a
+short break, a long break at the configured interval, or nothing when the toggle is off; a
+completed break starts focus when configured; a recovered session completes exactly once, starts
+at its full configured duration from the moment it is detected, and does not invent extra sessions
+after a long absence.
 
 If Gradle test workers fail with `Could not find or load main class Files\Common`, the Windows
 `PATH` contains a stray quote (see `C:\Program Files\WSL\"`). Run Gradle with a clean PATH, e.g.
@@ -185,7 +220,7 @@ app/src/main/java/com/rabindra/focustime/
 | Persisted state | On restore |
 | --- | --- |
 | RUNNING, deadline in future | resumes with the saved deadline |
-| RUNNING, deadline passed | completes once, records the focus session, next session idle |
+| RUNNING, deadline passed | completes once, records the focus session, and starts the next session when automatic flow is enabled for it (otherwise leaves it idle) |
 | PAUSED | keeps the exact paused remainder, clamped to the current duration setting |
 | IDLE | adopts the current duration settings |
 

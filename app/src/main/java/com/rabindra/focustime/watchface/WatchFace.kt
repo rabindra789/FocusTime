@@ -6,6 +6,7 @@ enum class WatchFace(val id: String, val label: String) {
     CIRCULAR_POMODORO("circular_pomodoro", "Circular"),
     GROWING_PLANT("growing_plant", "Growing plant"),
     MORSE_CODE("morse_code", "Morse code"),
+    FOREST("forest", "Forest"),
     ;
 
     fun next(): WatchFace = entries[(ordinal + 1) % entries.size]

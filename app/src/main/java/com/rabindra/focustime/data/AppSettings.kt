@@ -9,7 +9,7 @@ data class AppSettings(
     val shortBreakMinutes: Int = 5,
     val longBreakMinutes: Int = 15,
     val longBreakInterval: Int = 4,
-    val autoStartBreaks: Boolean = false,
+    val autoStartBreaks: Boolean = true,
     val autoStartFocus: Boolean = false,
     val autoDnd: Boolean = true,
     val dndMode: DndMode = DndMode.PRIORITY,

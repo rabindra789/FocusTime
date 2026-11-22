@@ -2,6 +2,7 @@ package com.rabindra.focustime.timer
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -28,16 +29,24 @@ class TimerRecoveryTest {
     )
 
     @Test
-    fun `session that ended while the app was away completes exactly once`() {
+    fun `session that ended while the app was away starts its break exactly once`() {
         val persisted = runningFocus(endedAt = now - 3_600_000L)
         val result = TimerRecovery.reconcile(persisted, config, now)
         assertTrue(result.completedFocus)
         assertEquals(25 * 60_000L, result.completedFocusDurationMillis)
         assertEquals(SessionType.SHORT_BREAK, result.state.sessionType)
-        assertEquals(TimerStatus.IDLE, result.state.status)
+        assertEquals(TimerStatus.RUNNING, result.state.status)
+        assertEquals(SessionType.FOCUS, result.completedSession)
+        assertTrue(result.startedSession)
+        // The recovered break starts now, at its configured length, not at the stale deadline.
+        assertEquals(5 * 60_000L, result.state.remainingMillis)
+        assertEquals(5 * 60_000L, result.state.durationMillis)
+        assertEquals(now + 5 * 60_000L, result.state.endWallClockMillis)
 
         val second = TimerRecovery.reconcile(result.state, config, now + 10_000L)
         assertFalse(second.completedFocus)
+        assertNull(second.completedSession)
+        assertEquals(TimerStatus.RUNNING, second.state.status)
     }
 
     @Test
@@ -45,13 +54,13 @@ class TimerRecoveryTest {
         val persisted = runningFocus(endedAt = now - 10 * 3_600_000L)
         val result = TimerRecovery.reconcile(persisted, config, now)
         assertTrue(result.completedFocus)
-        assertEquals(TimerStatus.IDLE, result.state.status)
+        assertEquals(SessionType.SHORT_BREAK, result.state.sessionType)
         assertEquals(1, result.state.sessionNumber)
         assertEquals(1, result.state.cyclePosition)
     }
 
     @Test
-    fun `expired break does not count as a focus completion`() {
+    fun `expired break starts the next focus and does not count as a focus completion`() {
         val persisted = TimerState(
             sessionType = SessionType.SHORT_BREAK,
             status = TimerStatus.RUNNING,
@@ -63,9 +72,44 @@ class TimerRecoveryTest {
         )
         val result = TimerRecovery.reconcile(persisted, config, now)
         assertFalse(result.completedFocus)
+        assertEquals(SessionType.SHORT_BREAK, result.completedSession)
         assertEquals(SessionType.FOCUS, result.state.sessionType)
-        assertEquals(TimerStatus.IDLE, result.state.status)
+        assertEquals(TimerStatus.RUNNING, result.state.status)
         assertEquals(4, result.state.sessionNumber)
+        assertEquals(25 * 60_000L, result.state.remainingMillis)
+    }
+
+    @Test
+    fun `disabling automatic flow leaves the next session idle`() {
+        val manual = config.copy(autoStartBreaks = false, autoStartFocus = false)
+        val result = TimerRecovery.reconcile(runningFocus(endedAt = now - 60_000L), manual, now)
+        assertTrue(result.completedFocus)
+        assertEquals(SessionType.SHORT_BREAK, result.state.sessionType)
+        assertEquals(TimerStatus.IDLE, result.state.status)
+        assertFalse(result.startedSession)
+        assertEquals(0L, result.state.endWallClockMillis)
+    }
+
+    @Test
+    fun `recovery can be told not to auto start even when flow is enabled`() {
+        val result = TimerRecovery.reconcile(
+            runningFocus(endedAt = now - 60_000L),
+            config,
+            now,
+            allowAutoStart = false,
+        )
+        assertEquals(TimerStatus.IDLE, result.state.status)
+        assertEquals(SessionType.FOCUS, result.completedSession)
+    }
+
+    @Test
+    fun `recovered long break respects the configured interval`() {
+        val persisted = runningFocus(endedAt = now - 60_000L, cycle = 3)
+        val result = TimerRecovery.reconcile(persisted, config, now)
+        assertEquals(SessionType.LONG_BREAK, result.state.sessionType)
+        assertEquals(TimerStatus.RUNNING, result.state.status)
+        assertEquals(15 * 60_000L, result.state.remainingMillis)
+        assertEquals(0, result.state.cyclePosition)
     }
 
     @Test
@@ -73,6 +117,7 @@ class TimerRecoveryTest {
         val persisted = runningFocus(endedAt = now + 10 * 60_000L)
         val result = TimerRecovery.reconcile(persisted, config, now)
         assertFalse(result.completedFocus)
+        assertNull(result.completedSession)
         assertEquals(TimerStatus.RUNNING, result.state.status)
         assertEquals(10 * 60_000L, result.state.endWallClockMillis - now)
     }

@@ -20,6 +20,9 @@ data class FocusPalette(
     val divider: Color,
     val track: Color,
     val onAccent: Color,
+    /** Muted natural greens for the Forest face; never used for chrome. */
+    val foliage: Color,
+    val foliageMuted: Color,
     val isDark: Boolean,
 )
 
@@ -35,6 +38,8 @@ val DarkPalette = FocusPalette(
     divider = Color(0xFF33342F),
     track = Color(0xFF2A2B26),
     onAccent = Color(0xFF171815),
+    foliage = Color(0xFF7D8A68),
+    foliageMuted = Color(0xFF4B5340),
     isDark = true,
 )
 
@@ -62,5 +67,7 @@ val LightPalette = FocusPalette(
     divider = Color(0xFFD5D2C6),
     track = Color(0xFFDDD9CD),
     onAccent = Color(0xFFF7F5EE),
+    foliage = Color(0xFF6C7A58),
+    foliageMuted = Color(0xFF9DAA8C),
     isDark = false,
 )
