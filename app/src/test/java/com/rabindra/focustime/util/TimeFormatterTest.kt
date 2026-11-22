@@ -62,4 +62,36 @@ class TimeFormatterTest {
         assertEquals("SESSION 01", TimeFormatter.sessionLabel(1))
         assertEquals("SESSION 12", TimeFormatter.sessionLabel(12))
     }
+
+    @Test
+    fun `noon is PM and midnight is zero hundred in 24 hour`() {
+        assertEquals(ClockText("12:00", "PM"), TimeFormatter.clock(LocalTime.NOON, use24Hour = false))
+        assertEquals("00:00", TimeFormatter.clock(LocalTime.MIDNIGHT, use24Hour = true).time)
+    }
+
+    @Test
+    fun `short date is uppercase`() {
+        assertEquals(
+            "21 NOV",
+            TimeFormatter.shortDate(LocalDate.of(2026, 11, 21), Locale.ENGLISH),
+        )
+    }
+
+    @Test
+    fun `countdown rounds a partial second up`() {
+        assertEquals("01:00", TimeFormatter.countdown(59_999L))
+        assertEquals("25:00", TimeFormatter.countdown(1_499_999L))
+    }
+
+    @Test
+    fun `tracking labels are uppercase`() {
+        val previous = Locale.getDefault()
+        try {
+            Locale.setDefault(Locale.ENGLISH)
+            assertEquals("FOCUS", TimeFormatter.trackingLabel("Focus"))
+            assertEquals("LONG BREAK", TimeFormatter.trackingLabel("Long break"))
+        } finally {
+            Locale.setDefault(previous)
+        }
+    }
 }

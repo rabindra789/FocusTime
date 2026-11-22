@@ -66,4 +66,16 @@ class StatsCodecTest {
         assertEquals(3, StatsCodec.totalSessions(days))
         assertEquals(4_500_000L, StatsCodec.totalMillis(days))
     }
+
+    @Test
+    fun `a negative focus time never reduces a day's total`() {
+        val days = StatsCodec.addSession(
+            mapOf(today to DayStats(focusSessions = 1, focusMillis = 60_000L)),
+            today,
+            -5_000L,
+        )
+
+        assertEquals(2, days[today]?.focusSessions)
+        assertEquals(60_000L, days[today]?.focusMillis)
+    }
 }

@@ -186,7 +186,7 @@ build but a different signing key, so uninstall the debug build before switching
 ## Tests
 
 ```powershell
-.\gradlew.bat testDebugUnitTest          # 82 JVM tests
+.\gradlew.bat testDebugUnitTest          # 100 JVM tests
 .\gradlew.bat connectedDebugAndroidTest  # 9 Compose UI tests on a device
 ```
 
@@ -194,7 +194,7 @@ Latest run on the Nothing Phone (3a) Lite (`A001T`, Android 16 / API 36):
 
 | Suite | Result |
 | --- | --- |
-| `testDebugUnitTest` | 82 tests, 0 failures, 0 skipped |
+| `testDebugUnitTest` | 100 tests, 0 failures, 0 skipped |
 | `connectedDebugAndroidTest` | 9 tests, 0 failures |
 | `assembleDebug` | success — `releases/FocusTime-debug.apk` (10.8 MB) |
 | `assembleRelease` | success — signed `app-release.apk` (7.4 MB) |
@@ -203,7 +203,8 @@ The UI tests cover the countdown and session label, tap-to-start, the running/pa
 controls, the duration stepper, the DND rows in Settings, the watch-face row with the low
 power toggle, and the About screen's creator, version and in-app licence text.
 
-The unit tests also cover the persisted watch-face ids and their cyclic next/previous order, and
+The unit tests also cover timer-configuration clamping, settings-to-timer mapping, live progress
+and stored-progress clamping, the persisted watch-face ids and their cyclic next/previous order, and
 include regressions for the timer reset bugs: a new focus session starts at the
 configured duration, elapsed time never carries into a new cycle, reset restores the configured
 duration, changing durations while paused clamps the paused remainder, and focus-to-break
